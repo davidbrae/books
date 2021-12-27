@@ -19,5 +19,6 @@ books %>%
 books %>%
   filter(Year>2012) %>%
   group_by(Month) %>%
-  summarize(n=n())
+  summarize(n=n()) %>%
+  arrange(n)
         
