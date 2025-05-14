@@ -136,6 +136,9 @@ server <- function(input, output, session) {
     books$Year <- as.numeric(as.character(books$Year))
     books$Pages <- as.numeric(as.character(books$Pages))
     
+    # Ensure Gender is treated as character
+    books$Gender <- as.character(books$Gender)
+    
     # Create date column if Month and Day are available
     books$Date <- NA
     for (i in 1:nrow(books)) {
@@ -157,7 +160,7 @@ server <- function(input, output, session) {
       }
     }
     
-    # Fill in missing values
+    # Fill in missing values for Pages
     books$Pages[is.na(books$Pages)] <- mean(books$Pages, na.rm = TRUE)
     
     return(books)
@@ -167,11 +170,27 @@ server <- function(input, output, session) {
   observe({
     books <- books_data()
     
-    updateSelectInput(session, "author_filter", choices = c("All", sort(unique(books$Author))))
-    updateSelectInput(session, "nationality_filter", choices = c("All", sort(unique(books$Nationality))))
-    updateSelectInput(session, "language_filter", choices = c("All", sort(unique(books$Language))))
-    updateSelectInput(session, "year_filter", choices = c("All", sort(unique(books$Year))))
-    updateSelectInput(session, "gender_filter", choices = c("All", sort(unique(books$Gender))))
+    # Filter out NA or empty values
+    authors <- unique(books$Author[!is.na(books$Author) & books$Author != ""])
+    nationalities <- unique(books$Nationality[!is.na(books$Nationality) & books$Nationality != ""])
+    languages <- unique(books$Language[!is.na(books$Language) & books$Language != ""])
+    years <- unique(books$Year[!is.na(books$Year)])
+    genders <- unique(books$Gender[!is.na(books$Gender) & books$Gender != ""])
+    
+    updateSelectInput(session, "author_filter", choices = c("All", sort(authors)))
+    updateSelectInput(session, "nationality_filter", choices = c("All", sort(nationalities)))
+    updateSelectInput(session, "language_filter", choices = c("All", sort(languages)))
+    updateSelectInput(session, "year_filter", choices = c("All", sort(years)))
+    updateSelectInput(session, "gender_filter", choices = c("All", sort(genders)))
+    
+    # Update pages range
+    min_pages <- min(books$Pages, na.rm = TRUE)
+    max_pages <- max(books$Pages, na.rm = TRUE)
+    
+    updateSliderInput(session, "pages_filter", 
+                      min = floor(min_pages), 
+                      max = ceiling(max_pages), 
+                      value = c(floor(min_pages), ceiling(max_pages)))
   })
   
   # Filter data based on user selections
@@ -283,6 +302,9 @@ server <- function(input, output, session) {
   # Top authors plot
   output$top_authors_plot <- renderPlotly({
     books <- books_data()
+    # Filter out NA or empty Author values
+    books <- books[!is.na(books$Author) & books$Author != "", ]
+    
     top_authors <- books %>%
       group_by(Author) %>%
       summarise(Count = n()) %>%
@@ -301,9 +323,17 @@ server <- function(input, output, session) {
   # Gender plot
   output$gender_plot <- renderPlotly({
     books <- books_data()
+    # Filter out NA or empty Gender values
+    books <- books[!is.na(books$Gender) & books$Gender != "", ]
+    
+    # Ensure Gender is treated as character
+    books$Gender <- as.character(books$Gender)
+    
+    # Create summary table
     gender_counts <- books %>%
       group_by(Gender) %>%
-      summarise(Count = n())
+      summarise(Count = n()) %>%
+      arrange(desc(Count))
     
     p <- ggplot(gender_counts, aes(x = "", y = Count, fill = Gender)) +
       geom_bar(stat = "identity", width = 1) +
@@ -317,6 +347,9 @@ server <- function(input, output, session) {
   # Nationality plot
   output$nationality_plot <- renderPlotly({
     books <- books_data()
+    # Filter out NA or empty Nationality values
+    books <- books[!is.na(books$Nationality) & books$Nationality != "", ]
+    
     nationality_counts <- books %>%
       group_by(Nationality) %>%
       summarise(Count = n()) %>%
@@ -335,6 +368,9 @@ server <- function(input, output, session) {
   # Language plot
   output$language_plot <- renderPlotly({
     books <- books_data()
+    # Filter out NA or empty Language values
+    books <- books[!is.na(books$Language) & books$Language != "", ]
+    
     language_counts <- books %>%
       group_by(Language) %>%
       summarise(Count = n()) %>%
