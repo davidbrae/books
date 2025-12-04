@@ -2,7 +2,7 @@ library(tidyverse)
 library(readxl)
 library(readr)
 
-books <- read_csv('~/Desktop/books/Books.csv')
+books <- read_csv('~/Desktop/GitRepos/books/Books.csv')
 
 
 books %>%
